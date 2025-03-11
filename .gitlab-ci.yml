@@ -22,16 +22,15 @@ services:
     alias: redis  # Ensures Redis is reachable
 
 before_script:
-  - apt-get update && apt-get install -y unzip git curl libpq-dev
+  - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
   - docker-php-ext-install pdo pdo_pgsql
   - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
-
-  # 🚀 Ensure PostgreSQL is ready before migrations
-  - echo "Waiting for database to be ready..."
-  - until pg_isready -h db -p 5432 -U "$DB_USERNAME"; do echo "Waiting for PostgreSQL..."; sleep 3; done
+  # Ensure PostgreSQL is ready before running migrations
+  - until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do echo "Waiting for PostgreSQL..."; sleep 3; done
+done
 
 build:
   stage: build
