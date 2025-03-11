@@ -47,6 +47,17 @@ jobs:
     - name: Generate Application Key
       run: php artisan key:generate
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install NPM Dependencies
+      run: npm install
+
+    - name: Build Frontend Assets
+      run: npm run build
+
     - name: Run Migrations
       run: php artisan migrate --force
 
