@@ -1,0 +1,57 @@
+image: php:8.2-fpm
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  APP_ENV: testing
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres_db
+  DB_PORT: 5432
+  DB_DATABASE: saas_app
+  DB_USERNAME: akira
+  DB_PASSWORD: root
+  REDIS_HOST: redis
+
+services:
+  - postgres:16
+  - redis:alpine
+
+before_script:
+  - apt-get update && apt-get install -y unzip git curl libpq-dev
+  - docker-php-ext-install pdo pdo_pgsql
+  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  - composer install --no-interaction --prefer-dist
+  - cp .env.example .env
+  - php artisan key:generate
+
+build:
+  stage: build
+  script:
+    - echo "Building the application..."
+    - composer install --no-dev --no-interaction --prefer-dist
+  artifacts:
+    paths:
+      - vendor/
+
+test:
+  stage: test
+  script:
+    - echo "Running tests..."
+    - php artisan config:cache
+    - php artisan migrate --env=testing --force
+    - vendor/bin/phpunit --testdox
+  artifacts:
+    when: always
+    reports:
+      junit: storage/logs/phpunit.xml
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploying application..."
+    - ./deploy.sh
+  only:
+    - main
