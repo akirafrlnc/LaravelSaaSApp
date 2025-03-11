@@ -8,7 +8,7 @@ stages:
 variables:
   APP_ENV: testing
   DB_CONNECTION: pgsql
-  DB_HOST: postgres_db
+  DB_HOST: db  # Matches the .env file
   DB_PORT: 5432
   DB_DATABASE: saas_app
   DB_USERNAME: akira
@@ -16,8 +16,10 @@ variables:
   REDIS_HOST: redis
 
 services:
-  - postgres:16
-  - redis:alpine
+  - name: postgres:16
+    alias: db  # Makes sure Laravel can connect using "DB_HOST=db"
+  - name: redis:alpine
+    alias: redis  # Ensures Redis is reachable
 
 before_script:
   - apt-get update && apt-get install -y unzip git curl libpq-dev
@@ -41,7 +43,7 @@ test:
   script:
     - echo "Running tests..."
     - php artisan config:cache
-    - php artisan migrate --env=testing --force
+    - php artisan migrate --force
     - vendor/bin/phpunit --testdox
   artifacts:
     when: always
@@ -51,7 +53,6 @@ test:
 deploy:
   stage: deploy
   script:
-    - echo "Deploying application..."
-    - ./deploy.sh
+    - echo "Skipping deployment for now..."
   only:
     - main
