@@ -29,7 +29,7 @@ before_script:
   - cp .env.example .env
   - php artisan key:generate
   # Ensure PostgreSQL is ready before running migrations
-  - until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do echo "Waiting for PostgreSQL..."; sleep 3; done
+  - until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do echo "Waiting for PostgreSQL..."; sleep 3;
 done
 
 build:
