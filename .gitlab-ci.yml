@@ -28,6 +28,7 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
+  # Wait for PostgreSQL to be ready
   - until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME"; do echo "Waiting for PostgreSQL..."; sleep 3; done
 
 build:
