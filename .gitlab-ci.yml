@@ -18,6 +18,7 @@ variables:
 services:
   - name: postgres:16
     alias: db
+    command: ["postgres", "-c", "listen_addresses='*'"]
   - name: redis:alpine
     alias: redis
 
@@ -28,8 +29,11 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
-  # Wait for PostgreSQL to be ready
-  - until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME"; do echo "Waiting for PostgreSQL..."; sleep 3; done
+  # Explicitly wait for PostgreSQL to be ready
+  - until PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q'; do
+      echo "Waiting for PostgreSQL to be ready...";
+      sleep 3;
+    done
 
 build:
   stage: build
@@ -43,6 +47,8 @@ build:
 test:
   stage: test
   script:
+    - echo "Testing database connection..."
+    - PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\dt'
     - echo "Running tests..."
     - php artisan config:cache
     - php artisan migrate --force
