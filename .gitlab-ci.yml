@@ -8,7 +8,7 @@ stages:
 variables:
   APP_ENV: testing
   DB_CONNECTION: pgsql
-  DB_HOST: db  # Matches the .env file
+  DB_HOST: db  # Matches Laravel's .env
   DB_PORT: 5432
   DB_DATABASE: saas_app
   DB_USERNAME: akira
@@ -17,7 +17,7 @@ variables:
 
 services:
   - name: postgres:16
-    alias: db  # Makes sure Laravel can connect using "DB_HOST=db"
+    alias: db  # Ensures Laravel can connect using "DB_HOST=db"
   - name: redis:alpine
     alias: redis  # Ensures Redis is reachable
 
@@ -28,6 +28,10 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
+
+  # 🚀 Ensure PostgreSQL is ready before migrations
+  - echo "Waiting for database to be ready..."
+  - until pg_isready -h db -p 5432 -U "$DB_USERNAME"; do echo "Waiting for PostgreSQL..."; sleep 3; done
 
 build:
   stage: build
