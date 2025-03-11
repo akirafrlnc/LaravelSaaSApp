@@ -7,19 +7,19 @@ stages:
 
 variables:
   APP_ENV: testing
-  DB_CONNECTION: pgsql
-  DB_HOST: db  # Matches Laravel's .env
-  DB_PORT: 5432
-  DB_DATABASE: saas_app
-  DB_USERNAME: akira
-  DB_PASSWORD: root
-  REDIS_HOST: redis
+  DB_CONNECTION=pgsql
+  DB_HOST=db  # Matches .env and the service alias in GitLab CI
+  DB_PORT=5432
+  DB_DATABASE=saas_app
+  DB_USERNAME=akira
+  DB_PASSWORD=root
+  REDIS_HOST=redis
 
 services:
   - name: postgres:16
-    alias: db  # Ensures Laravel can connect using "DB_HOST=db"
+    alias: db
   - name: redis:alpine
-    alias: redis  # Ensures Redis is reachable
+    alias: redis
 
 before_script:
   - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
@@ -28,9 +28,10 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
-  # Ensure PostgreSQL is ready before running migrations
-  - |
-    until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do
+
+  # ✅ Ensure PostgreSQL is ready before running Laravel migrations
+  - echo "Waiting for PostgreSQL to be ready..."
+  - until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do
       echo "Waiting for PostgreSQL...";
       sleep 3;
     done
