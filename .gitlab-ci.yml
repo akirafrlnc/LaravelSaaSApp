@@ -13,14 +13,14 @@ services:
 
 variables:
   APP_ENV: testing
-  DB_CONNECTION=pgsql
-  DB_HOST=db
-  DB_PORT=5432
-  DB_DATABASE=saas_app
-  DB_USERNAME=akira
-  DB_PASSWORD=root
-  REDIS_HOST=redis
-  PGPASSWORD=root  # Ensures psql command doesn't prompt for password
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_DATABASE: saas_app
+  DB_USERNAME: akira
+  DB_PASSWORD: root
+  REDIS_HOST: redis
+  PGPASSWORD: root  # Ensure PostgreSQL authentication without prompt
 
 before_script:
   - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
@@ -30,7 +30,7 @@ before_script:
   - cp .env.example .env
   - php artisan key:generate
   # Debug: List running services to check if "db" exists
-  - echo "🔍 Checking running services:"
+  - echo "🔍 Checking running services..."
   - docker ps -a || true  # GitLab CI doesn't run full Docker, but let's try
   - echo "Waiting for PostgreSQL service to be ready..."
   - until psql -h "db" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
