@@ -1,66 +1,25 @@
-image: php:8.2-fpm
+image: postgres:16  # Use PostgreSQL image directly
 
 stages:
-  - build
   - test
-  - deploy
-
-variables:
-  APP_ENV: testing
-  DB_CONNECTION: pgsql
-  DB_HOST: db  # Matches Laravel's .env
-  DB_PORT: 5432
-  DB_DATABASE: saas_app
-  DB_USERNAME: akira
-  DB_PASSWORD: root
-  REDIS_HOST: redis
 
 services:
   - name: postgres:16
-    alias: db
-    command: ["postgres", "-c", "listen_addresses='*'"]
-  - name: redis:alpine
-    alias: redis
+    alias: db  # Ensures GitLab recognizes "db" as the hostname
 
-before_script:
-  - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
-  - docker-php-ext-install pdo pdo_pgsql
-  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-  - composer install --no-interaction --prefer-dist
-  - cp .env.example .env
-  - php artisan key:generate
-  # Explicitly wait for PostgreSQL to be ready
-  - until PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q'; do
-      echo "Waiting for PostgreSQL to be ready...";
-      sleep 3;
-    done
+variables:
+  POSTGRES_DB: test_db
+  POSTGRES_USER: test_user
+  POSTGRES_PASSWORD: test_password
+  DB_HOST: db  # This must match the service alias
 
-build:
-  stage: build
-  script:
-    - echo "Building the application..."
-    - composer install --no-dev --no-interaction --prefer-dist
-  artifacts:
-    paths:
-      - vendor/
-
-test:
+test_connection:
   stage: test
   script:
-    - echo "Testing database connection..."
-    - PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\dt'
-    - echo "Running tests..."
-    - php artisan config:cache
-    - php artisan migrate --force
-    - vendor/bin/phpunit --testdox
-  artifacts:
-    when: always
-    reports:
-      junit: storage/logs/phpunit.xml
-
-deploy:
-  stage: deploy
-  script:
-    - echo "Skipping deployment for now..."
-  only:
-    - main
+    - echo "Checking PostgreSQL Connection..."
+    - apt-get update && apt-get install -y postgresql-client
+    - until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q'; do
+        echo "PostgreSQL is unavailable - sleeping";
+        sleep 3;
+      done
+    - echo "✅ PostgreSQL is available!"
