@@ -7,19 +7,20 @@ stages:
 
 services:
   - name: postgres:16
-    alias: db  # Ensures Laravel can connect using "DB_HOST=db"
+    alias: db
   - name: redis:alpine
-    alias: redis  # Ensures Redis is reachable
+    alias: redis
 
 variables:
   APP_ENV: testing
-  DB_CONNECTION: pgsql
-  DB_HOST: db
-  DB_PORT: 5432
-  DB_DATABASE: saas_app
-  DB_USERNAME: akira
-  DB_PASSWORD: root
-  REDIS_HOST: redis
+  DB_CONNECTION=pgsql
+  DB_HOST=db
+  DB_PORT=5432
+  DB_DATABASE=saas_app
+  DB_USERNAME=akira
+  DB_PASSWORD=root
+  REDIS_HOST=redis
+  PGPASSWORD=root  # Ensures psql command doesn't prompt for password
 
 before_script:
   - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
@@ -28,9 +29,12 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
-  # Wait for PostgreSQL to be ready
-  - until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q'; do
-      echo "Waiting for PostgreSQL...";
+  # Debug: List running services to check if "db" exists
+  - echo "🔍 Checking running services:"
+  - docker ps -a || true  # GitLab CI doesn't run full Docker, but let's try
+  - echo "Waiting for PostgreSQL service to be ready..."
+  - until psql -h "db" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
+      echo "⏳ Waiting for PostgreSQL...";
       sleep 3;
     done
   - echo "✅ PostgreSQL is available!"
