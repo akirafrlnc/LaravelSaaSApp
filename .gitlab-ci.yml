@@ -8,6 +8,10 @@ stages:
 services:
   - name: postgres:16
     alias: db
+    variables:
+      POSTGRES_USER: akira
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: saas_app
   - name: redis:alpine
     alias: redis
 
@@ -29,12 +33,16 @@ before_script:
   - composer install --no-interaction --prefer-dist
   - cp .env.example .env
   - php artisan key:generate
-  # Debug: List running services to check if "db" exists
-  - echo "🔍 Checking running services..."
-  - docker ps -a || true  # GitLab CI doesn't run full Docker, but let's try
-  - echo "Waiting for PostgreSQL service to be ready..."
+
+  # Debugging: Check running services
+  - echo "🔍 Checking available services..."
+  - cat /etc/hosts  # List hostnames to check if 'db' exists
+  - ping -c 3 db || true  # Test if 'db' is resolving
+
+  # Wait for PostgreSQL to be ready
+  - echo "⏳ Waiting for PostgreSQL..."
   - until psql -h "db" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
-      echo "⏳ Waiting for PostgreSQL...";
+      echo "⏳ Still waiting for PostgreSQL...";
       sleep 3;
     done
   - echo "✅ PostgreSQL is available!"
@@ -42,7 +50,7 @@ before_script:
 build:
   stage: build
   script:
-    - echo "Building Laravel application..."
+    - echo "🔨 Building Laravel application..."
     - composer install --no-dev --no-interaction --prefer-dist
   artifacts:
     paths:
@@ -51,7 +59,7 @@ build:
 test:
   stage: test
   script:
-    - echo "Running Laravel tests..."
+    - echo "🧪 Running Laravel tests..."
     - php artisan config:cache
     - php artisan migrate --force
     - vendor/bin/phpunit --testdox
@@ -63,6 +71,6 @@ test:
 deploy:
   stage: deploy
   script:
-    - echo "Skipping deployment for now..."
+    - echo "🚀 Skipping deployment for now..."
   only:
     - main
