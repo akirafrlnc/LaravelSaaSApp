@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-
+use Illuminate\Support\Facades\Session;
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
 
@@ -11,13 +11,18 @@ test('login screen can be rendered', function () {
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
+    // Start session for CSRF token
+    Session::start();
+
     $response = $this->post('/login', [
+        '_token' => csrf_token(), // ✅ Add CSRF token
         'email' => $user->email,
         'password' => 'password',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    // Ensure the user is authenticated
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect(route('dashboard'));
 });
 
 test('users can not authenticate with invalid password', function () {

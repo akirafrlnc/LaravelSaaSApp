@@ -59,14 +59,16 @@ build:
 test:
   stage: test
   script:
-    - echo "🧪 Running Laravel tests..."
+    - mkdir -p storage/logs  # Ensure directory exists
+    - touch storage/logs/phpunit.xml  # Create empty file if necessary
     - php artisan config:cache
     - php artisan migrate --force
-    - vendor/bin/phpunit --testdox
+    - ./vendor/bin/pest --log-junit storage/logs/phpunit.xml
   artifacts:
     when: always
     reports:
       junit: storage/logs/phpunit.xml
+
 
 deploy:
   stage: deploy
