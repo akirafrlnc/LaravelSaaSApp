@@ -1,25 +1,64 @@
-image: postgres:16  # Use PostgreSQL image directly
+image: php:8.2-fpm
 
 stages:
+  - build
   - test
+  - deploy
 
 services:
   - name: postgres:16
-    alias: db  # Ensures GitLab recognizes "db" as the hostname
+    alias: db  # Ensures Laravel can connect using "DB_HOST=db"
+  - name: redis:alpine
+    alias: redis  # Ensures Redis is reachable
 
 variables:
-  POSTGRES_DB: test_db
-  POSTGRES_USER: test_user
-  POSTGRES_PASSWORD: test_password
-  DB_HOST: db  # This must match the service alias
+  APP_ENV: testing
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_DATABASE: saas_app
+  DB_USERNAME: akira
+  DB_PASSWORD: root
+  REDIS_HOST: redis
 
-test_connection:
+before_script:
+  - apt-get update && apt-get install -y unzip git curl libpq-dev postgresql-client
+  - docker-php-ext-install pdo pdo_pgsql
+  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  - composer install --no-interaction --prefer-dist
+  - cp .env.example .env
+  - php artisan key:generate
+  # Wait for PostgreSQL to be ready
+  - until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q'; do
+      echo "Waiting for PostgreSQL...";
+      sleep 3;
+    done
+  - echo "✅ PostgreSQL is available!"
+
+build:
+  stage: build
+  script:
+    - echo "Building Laravel application..."
+    - composer install --no-dev --no-interaction --prefer-dist
+  artifacts:
+    paths:
+      - vendor/
+
+test:
   stage: test
   script:
-    - echo "Checking PostgreSQL Connection..."
-    - apt-get update && apt-get install -y postgresql-client
-    - until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q'; do
-        echo "PostgreSQL is unavailable - sleeping";
-        sleep 3;
-      done
-    - echo "✅ PostgreSQL is available!"
+    - echo "Running Laravel tests..."
+    - php artisan config:cache
+    - php artisan migrate --force
+    - vendor/bin/phpunit --testdox
+  artifacts:
+    when: always
+    reports:
+      junit: storage/logs/phpunit.xml
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Skipping deployment for now..."
+  only:
+    - main
